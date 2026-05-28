@@ -354,15 +354,26 @@ function update(){
   }
 }
 
+let deathMsg='';
 function die(){
   if(state!=='playing'||inv>0)return;
   pl.alive=false;lives--;
   state='dead';deathT=lives<=0?220:140;
-  const frases=['¡Ánimo Clau, tú puedes!','¡Clau, a intentarlo de nuevo!','¡Clau no se rinde!'];
+  const frases=[
+    '¡Tú puedes, Clau! 💪',
+    '¡Clau no se rinde! 🎀',
+    '¡Arriba ese ánimo, Clau! 🐣',
+    '¡Vamos Clau, otra vez! ⭐',
+    '¡Clau es imparable! 🔥',
+  ];
   const f=frases[Math.floor(Math.random()*frases.length)];
-  if(lives<=0){setMsg(`¡Pipipi! 🐣 Game Over… ¡${f}`);lives=3;score=0;loadWorld(worldIdx=0);pl=mkPl();}
-  else setMsg(`¡Pipipi! 🐣 ${f} Vidas: ${lives}`);
-  setHUD();
+  if(lives<=0){
+    deathMsg=f;
+    lives=3;score=0;loadWorld(worldIdx=0);pl=mkPl();
+  } else {
+    deathMsg=f;
+  }
+  setMsg('');setHUD();
 }
 
 const wx=x=>x-camX;
@@ -521,53 +532,51 @@ function draw(){
   drawClau(pl.x,pl.y,pl.dir,pl.frame,pl.alive);
   drawProgress();drawFW();
 
+  // helper: texto con sombra
+  function txt(t,x,y,fill,font,shadow='rgba(0,0,0,0.7)',sOff=3){
+    ctx.font=font;ctx.textAlign='center';
+    ctx.fillStyle=shadow;ctx.fillText(t,x+sOff,y+sOff);
+    ctx.fillStyle=fill;ctx.fillText(t,x,y);
+  }
+
   if(state==='win'){
-    ctx.save();ctx.globalAlpha=0.65;ctx.fillStyle='#111';ctx.fillRect(0,0,CW,CH);ctx.restore();
-    ctx.textAlign='center';
+    ctx.save();ctx.globalAlpha=0.7;ctx.fillStyle='#111';ctx.fillRect(0,0,CW,CH);ctx.restore();
     if(worldIdx<2){
-      ctx.fillStyle='#FFD700';ctx.font='bold 28px Courier New,monospace';
-      ctx.fillText(`¡Clau lo logró! 🎉 Mundo ${worldIdx+1} superado`,CW/2,CH/2-20);
-      ctx.fillStyle='#fff';ctx.font='15px Courier New,monospace';
-      ctx.fillText(`Cargando Mundo ${worldIdx+2}...`,CW/2,CH/2+14);
+      txt(`🎉 ¡Mundo ${worldIdx+1} superado!`,CW/2,CH/2-28,'#FFD700','bold 36px Courier New,monospace');
+      txt(`Cargando Mundo ${worldIdx+2}...`,CW/2,CH/2+20,'#fff','bold 22px Courier New,monospace');
       const prog=Math.min(1,celebT/210);
-      ctx.fillStyle='rgba(255,255,255,0.2)';ctx.beginPath();ctx.roundRect(CW/2-100,CH/2+34,200,10,5);ctx.fill();
-      ctx.fillStyle='#FFD700';ctx.beginPath();ctx.roundRect(CW/2-100,CH/2+34,200*prog,10,5);ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.18)';ctx.beginPath();ctx.roundRect(CW/2-120,CH/2+44,240,12,6);ctx.fill();
+      ctx.fillStyle='#FFD700';ctx.beginPath();ctx.roundRect(CW/2-120,CH/2+44,240*prog,12,6);ctx.fill();
     }else{
-      ctx.fillStyle='#FFD700';ctx.font='bold 30px Courier New,monospace';
-      ctx.fillText('¡FELICIDADES CLAU! 🏆',CW/2,CH/2-26);
-      ctx.fillStyle='#ffe066';ctx.font='bold 17px Courier New,monospace';
-      ctx.fillText('¡Superaste los 3 mundos!',CW/2,CH/2+8);
-      ctx.fillStyle='#fff';ctx.font='13px Courier New,monospace';
-      ctx.fillText('🐣 ¡Clau es imparable! 🎀',CW/2,CH/2+34);
+      txt('¡FELICIDADES CLAU! 🏆',CW/2,CH/2-30,'#FFD700','bold 36px Courier New,monospace');
+      txt('¡Superaste los 3 mundos!',CW/2,CH/2+14,'#ffe066','bold 24px Courier New,monospace');
+      txt('🐣 ¡Clau es imparable! 🎀',CW/2,CH/2+46,'#fff','bold 20px Courier New,monospace');
     }
     ctx.textAlign='left';drawFW();
   }
   if(state==='final'){
-    ctx.save();ctx.globalAlpha=0.75;ctx.fillStyle='#111';ctx.fillRect(0,0,CW,CH);ctx.restore();
-    ctx.textAlign='center';
-    ctx.fillStyle='#FFD700';ctx.font='bold 32px Courier New,monospace';
-    ctx.fillText('¡FELICIDADES CLAU! 🏆',CW/2,CH/2-40);
-    ctx.fillStyle='#ffe066';ctx.font='bold 18px Courier New,monospace';
-    ctx.fillText('🎀 ¡Clau conquistó todo! 🎀',CW/2,CH/2-4);
-    ctx.fillStyle='#fff';ctx.font='13px Courier New,monospace';
-    ctx.fillText('Score: '+score+' pts  •  Mundos: 3/3',CW/2,CH/2+24);
-    // Botón jugar de nuevo (aparece tras 2 seg)
+    ctx.save();ctx.globalAlpha=0.78;ctx.fillStyle='#111';ctx.fillRect(0,0,CW,CH);ctx.restore();
+    txt('¡FELICIDADES CLAU! 🏆',CW/2,CH/2-52,'#FFD700','bold 38px Courier New,monospace');
+    txt('🎀 ¡Clau conquistó todo! 🎀',CW/2,CH/2-6,'#ffe066','bold 26px Courier New,monospace');
+    txt('Score: '+score+' pts  •  Mundos: 3/3',CW/2,CH/2+32,'#fff','bold 18px Courier New,monospace');
     if(winT>120){
-      const bw=200,bh=38,bx=CW/2-bw/2,by=CH/2+50;
-      ctx.fillStyle='#FFD700';ctx.beginPath();ctx.roundRect(bx,by,bw,bh,10);ctx.fill();
-      ctx.fillStyle='#1a1a2e';ctx.font='bold 16px Courier New,monospace';
-      ctx.fillText('🐣 ¡Jugar de nuevo!',CW/2,by+25);
-      // guardar zona del botón para click/touch
+      const bw=260,bh=48,bx=CW/2-bw/2,by=CH/2+58;
+      // sombra botón
+      ctx.fillStyle='rgba(0,0,0,0.35)';ctx.beginPath();ctx.roundRect(bx+3,by+3,bw,bh,14);ctx.fill();
+      ctx.fillStyle='#FFD700';ctx.beginPath();ctx.roundRect(bx,by,bw,bh,14);ctx.fill();
+      ctx.fillStyle='#1a1a2e';ctx.font='bold 20px Courier New,monospace';ctx.textAlign='center';
+      ctx.fillText('🐣  ¡Jugar de nuevo!',CW/2,by+32);
       window._restartBtn={x:bx,y:by,w:bw,h:bh};
-    } else {
+    }else{
       window._restartBtn=null;
     }
     ctx.textAlign='left';drawFW();
   }
   if(state==='dead'){
-    ctx.save();ctx.globalAlpha=0.45;ctx.fillStyle='#000';ctx.fillRect(0,0,CW,CH);ctx.restore();
-    ctx.fillStyle='#FF5555';ctx.font='bold 26px Courier New,monospace';ctx.textAlign='center';
-    ctx.fillText('¡Pipipi! 🐥',CW/2,CH/2);ctx.textAlign='left';
+    ctx.save();ctx.globalAlpha=0.52;ctx.fillStyle='#000';ctx.fillRect(0,0,CW,CH);ctx.restore();
+    txt('¡Pipipi! 🐥',CW/2,CH/2-18,'#FF5555','bold 44px Courier New,monospace');
+    txt(deathMsg,CW/2,CH/2+30,'#ffddaa','bold 20px Courier New,monospace');
+    ctx.textAlign='left';
   }
 }
 
