@@ -6,74 +6,175 @@
 <title>Clau 🐣 – Aventura de 3 Mundos</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box;}
-  html,body{width:100%;height:100%;background:#1a1a2e;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow:hidden;touch-action:none;}
-  #gw{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;font-family:'Courier New',monospace;width:100%;max-width:700px;}
-  #hud{display:flex;gap:16px;font-size:13px;font-weight:600;color:#FFD700;text-shadow:0 1px 3px #000;}
-  #msg{font-size:13px;font-weight:500;color:#fff;min-height:18px;text-align:center;text-shadow:0 1px 4px #000;}
-  #ctrl{font-size:10px;color:#aaa;text-align:center;}
-  #gc{display:block;border:3px solid #5a3e1b;border-radius:8px;image-rendering:pixelated;cursor:none;width:100%;max-width:700px;height:auto;}
+  html,body{
+    width:100%;height:100%;
+    background:#1a1a2e;
+    overflow:hidden;
+    touch-action:none;
+    font-family:'Courier New',monospace;
+  }
 
-  /* Controles táctiles */
+  /* ── Aviso girar pantalla ── */
+  #rotate-msg{
+    display:none;
+    position:fixed;inset:0;
+    background:#1a1a2e;
+    z-index:999;
+    flex-direction:column;
+    align-items:center;justify-content:center;
+    gap:16px;color:#FFD700;text-align:center;padding:20px;
+  }
+  #rotate-msg .icon{font-size:60px;animation:spin 1.4s ease-in-out infinite alternate;}
+  @keyframes spin{from{transform:rotate(-30deg);}to{transform:rotate(30deg);}}
+  #rotate-msg p{font-size:18px;font-weight:600;color:#fff;}
+  #rotate-msg small{font-size:13px;color:#aaa;}
+
+  /* ── Wrapper principal ── */
+  #gw{
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    width:100%;height:100%;
+    gap:4px;
+    position:relative;
+  }
+
+  #hud{
+    display:flex;gap:16px;font-size:13px;font-weight:600;
+    color:#FFD700;text-shadow:0 1px 3px #000;
+    z-index:10;
+  }
+  #msg{
+    font-size:12px;font-weight:500;color:#fff;
+    min-height:16px;text-align:center;
+    text-shadow:0 1px 4px #000;z-index:10;
+  }
+  #ctrl{font-size:10px;color:#aaa;text-align:center;}
+
+  /* ── Canvas ── */
+  #gc{
+    display:block;
+    border:3px solid #5a3e1b;
+    border-radius:8px;
+    image-rendering:pixelated;
+    cursor:none;
+    /* se escala vía JS */
+  }
+
+  /* ── Botones táctiles: encima del canvas, posición absoluta ── */
   #touch-controls{
     display:none;
-    width:100%;
-    max-width:700px;
-    padding:6px 10px;
+    position:absolute;
+    bottom:0;left:0;right:0;
+    pointer-events:none; /* el wrapper no bloquea, solo los hijos */
+    z-index:20;
+    padding:10px 14px;
     justify-content:space-between;
-    align-items:center;
-    gap:8px;
-    user-select:none;
-    -webkit-user-select:none;
+    align-items:flex-end;
+    user-select:none;-webkit-user-select:none;
   }
-  .btn-group{display:flex;gap:8px;}
+  .btn-group{display:flex;gap:10px;pointer-events:all;}
   .tbtn{
-    width:58px;height:58px;border-radius:14px;
-    background:rgba(255,255,255,0.15);
-    border:2px solid rgba(255,255,255,0.3);
+    width:72px;height:72px;
+    border-radius:50%;
+    background:rgba(255,255,255,0.12);
+    border:2px solid rgba(255,255,255,0.22);
     display:flex;align-items:center;justify-content:center;
-    font-size:22px;color:#fff;
-    backdrop-filter:blur(4px);
+    font-size:26px;color:rgba(255,255,255,0.7);
     -webkit-tap-highlight-color:transparent;
-    transition:background 0.1s;
+    transition:background 0.08s, border-color 0.08s;
     cursor:pointer;
-    box-shadow:0 4px 12px rgba(0,0,0,0.3);
+    box-shadow:0 2px 10px rgba(0,0,0,0.25);
+    backdrop-filter:blur(3px);
+    pointer-events:all;
   }
-  .tbtn:active,.tbtn.pressed{background:rgba(255,215,0,0.35);border-color:#FFD700;}
-  #btn-jump{width:70px;height:70px;border-radius:50%;background:rgba(255,100,50,0.25);border-color:rgba(255,120,60,0.6);font-size:26px;}
-  #btn-jump:active,#btn-jump.pressed{background:rgba(255,120,60,0.5);}
+  .tbtn:active,.tbtn.pressed{
+    background:rgba(255,215,0,0.28);
+    border-color:rgba(255,215,0,0.6);
+    color:#FFD700;
+  }
+  #btn-jump{
+    width:82px;height:82px;
+    background:rgba(255,100,50,0.15);
+    border-color:rgba(255,140,60,0.35);
+    font-size:30px;
+  }
+  #btn-jump:active,#btn-jump.pressed{
+    background:rgba(255,120,60,0.38);
+    border-color:rgba(255,160,60,0.7);
+  }
 
-  @media (max-width:600px){
+  /* Mostrar touch en móvil landscape */
+  @media (max-width:900px) and (orientation:landscape){
     #ctrl{display:none;}
     #touch-controls{display:flex;}
-    #gw{gap:2px;padding:4px 0;}
-    .tbtn{width:54px;height:54px;font-size:20px;}
-    #btn-jump{width:64px;height:64px;}
-    #hud{font-size:12px;gap:12px;}
+  }
+  /* Mostrar aviso en móvil portrait */
+  @media (max-width:600px) and (orientation:portrait){
+    #rotate-msg{display:flex;}
   }
 </style>
 </head>
 <body>
+
+<!-- Aviso girar pantalla -->
+<div id="rotate-msg">
+  <div class="icon">📱</div>
+  <p>¡Gira tu celular!</p>
+  <small>El juego funciona en horizontal 🐣</small>
+</div>
+
 <div id="gw">
-  <div id="hud"><span>🐣 Vidas: <b id="hLives">3</b></span><span>⭐ <b id="hScore">0</b></span><span id="hWorld">🌍 Mundo 1</span></div>
+  <div id="hud">
+    <span>🐣 Vidas: <b id="hLives">3</b></span>
+    <span>⭐ <b id="hScore">0</b></span>
+    <span id="hWorld">🌍 Mundo 1</span>
+  </div>
   <canvas id="gc" width="680" height="380"></canvas>
   <div id="msg"></div>
   <div id="ctrl">← → Moverse &nbsp;|&nbsp; Espacio / ↑ Saltar &nbsp;|&nbsp; Doble salto</div>
-</div>
 
-<!-- Controles táctiles (visibles sólo en móvil) -->
-<div id="touch-controls">
-  <div class="btn-group">
-    <div class="tbtn" id="btn-left">◀</div>
-    <div class="tbtn" id="btn-right">▶</div>
+  <!-- Botones táctiles encima del canvas -->
+  <div id="touch-controls">
+    <div class="btn-group">
+      <div class="tbtn" id="btn-left">◀</div>
+      <div class="tbtn" id="btn-right">▶</div>
+    </div>
+    <div class="tbtn" id="btn-jump">🐣</div>
   </div>
-  <div class="tbtn" id="btn-jump">🐣<br><small style="font-size:9px">SALTO</small></div>
 </div>
 
 <script>
+// ── Canvas setup ──────────────────────────────────────────
 const cv=document.getElementById('gc'),ctx=cv.getContext('2d');
 const CW=680,CH=380,WW=1700,GY=CH-60;
 const GRAV=0.68,SPD=4.2;
 
+// Escalar canvas al tamaño real de pantalla manteniendo proporción
+function resizeCanvas(){
+  const gw=document.getElementById('gw');
+  const maxW=gw.clientWidth-20;
+  const maxH=gw.clientHeight-80; // dejar espacio para hud y msg
+  const scale=Math.min(maxW/CW, maxH/CH);
+  cv.style.width=(CW*scale)+'px';
+  cv.style.height=(CH*scale)+'px';
+
+  // Posicionar touch-controls encima del canvas
+  const tc=document.getElementById('touch-controls');
+  tc.style.width=(CW*scale)+'px';
+  tc.style.left='50%';
+  tc.style.transform='translateX(-50%)';
+  tc.style.bottom='auto';
+  // alinear al fondo del canvas
+  const cvRect=cv.getBoundingClientRect();
+  const gwRect=gw.getBoundingClientRect();
+  tc.style.top=(cvRect.top - gwRect.top)+'px';
+  tc.style.height=(CW*scale/CW*CH)+'px'; // misma altura que canvas escalado
+}
+window.addEventListener('resize',resizeCanvas);
+window.addEventListener('orientationchange',()=>setTimeout(resizeCanvas,200));
+resizeCanvas();
+
+// ── Estado ───────────────────────────────────────────────
 let worldIdx=0,state='playing',lives=3,score=0,deathT=0,fws=[],winT=0,inv=0,camX=0,celebT=0;
 const setMsg=t=>document.getElementById('msg').textContent=t;
 const setHUD=()=>{
@@ -82,6 +183,7 @@ const setHUD=()=>{
   document.getElementById('hWorld').textContent='🌍 Mundo '+(worldIdx+1);
 };
 
+// ── Mundos ───────────────────────────────────────────────
 const WORLDS=[
 {
   sky:['#3db5e8','#c5ecf8'],ground:'#8bc34a',gline:'#5a8a3f',platCol:'#8B6914',pitCol:'#1a2040',
@@ -176,44 +278,34 @@ function spikeHit(){
   for(const s of W.spikes){if(rc(pl.x+3,pl.y+18,pl.w-6,pl.h-18,s.x+2,s.y-13,s.w-4,13)){die();return;}}
 }
 
-// ── TECLAS ──────────────────────────────────────────────
+// ── Teclado ──────────────────────────────────────────────
 const keys={};
 window.addEventListener('keydown',e=>{keys[e.code]=true;if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();});
 window.addEventListener('keyup',e=>keys[e.code]=false);
 
-// ── CONTROLES TÁCTILES ───────────────────────────────────
+// ── Touch ─────────────────────────────────────────────────
 const touch={left:false,right:false,jump:false,_jh:false};
-
-function setupTouch(){
-  const btnL=document.getElementById('btn-left');
-  const btnR=document.getElementById('btn-right');
-  const btnJ=document.getElementById('btn-jump');
-
-  function addHold(el,flagName){
-    el.addEventListener('touchstart',e=>{e.preventDefault();touch[flagName]=true;el.classList.add('pressed');},{passive:false});
-    el.addEventListener('touchend',e=>{e.preventDefault();touch[flagName]=false;el.classList.remove('pressed');},{passive:false});
-    el.addEventListener('touchcancel',e=>{touch[flagName]=false;el.classList.remove('pressed');});
-    // mouse fallback (desktop testing)
-    el.addEventListener('mousedown',()=>{touch[flagName]=true;el.classList.add('pressed');});
-    el.addEventListener('mouseup',()=>{touch[flagName]=false;el.classList.remove('pressed');});
-    el.addEventListener('mouseleave',()=>{touch[flagName]=false;el.classList.remove('pressed');});
-  }
-
-  addHold(btnL,'left');
-  addHold(btnR,'right');
-  addHold(btnJ,'jump');
+function addHold(el,flag){
+  el.addEventListener('touchstart',e=>{e.preventDefault();touch[flag]=true;el.classList.add('pressed');},{passive:false});
+  el.addEventListener('touchend',e=>{e.preventDefault();touch[flag]=false;el.classList.remove('pressed');},{passive:false});
+  el.addEventListener('touchcancel',()=>{touch[flag]=false;el.classList.remove('pressed');});
+  el.addEventListener('mousedown',()=>{touch[flag]=true;el.classList.add('pressed');});
+  el.addEventListener('mouseup',()=>{touch[flag]=false;el.classList.remove('pressed');});
+  el.addEventListener('mouseleave',()=>{touch[flag]=false;el.classList.remove('pressed');});
 }
-setupTouch();
+addHold(document.getElementById('btn-left'),'left');
+addHold(document.getElementById('btn-right'),'right');
+addHold(document.getElementById('btn-jump'),'jump');
 
 function isLeft(){return keys['ArrowLeft']||keys['KeyA']||touch.left;}
 function isRight(){return keys['ArrowRight']||keys['KeyD']||touch.right;}
 function isJump(){return keys['Space']||keys['ArrowUp']||keys['KeyW']||touch.jump;}
 
+// ── Update ────────────────────────────────────────────────
 function update(){
   if(state==='dead'){if(--deathT<=0){state='playing';pl=mkPl();inv=100;setMsg('');setHUD();}return;}
   if(state==='win'){
-    winT++;
-    if(winT%10===0)spawnFW();
+    winT++;if(winT%10===0)spawnFW();
     fws.forEach(fw=>{fw.life-=0.016;fw.parts.forEach(p=>{p.x+=Math.cos(p.a)*p.spd;p.y+=Math.sin(p.a)*p.spd+0.05;p.spd*=0.97;p.life-=0.02;});});
     fws=fws.filter(f=>f.life>0);
     if(++celebT>210){
@@ -232,14 +324,11 @@ function update(){
   mp.x+=mp.spd*mp.dir;if(mp.x>mp.ox+mp.range||mp.x<mp.ox)mp.dir*=-1;
   if(mp2){mp2.x+=mp2.spd*mp2.dir;if(mp2.x>mp2.ox+mp2.range||mp2.x<mp2.ox)mp2.dir*=-1;}
 
-  const left=isLeft();
-  const right=isRight();
-  const jump=isJump();
+  const left=isLeft(),right=isRight(),jump=isJump();
   const j1=worldIdx===2?-12.5:-13.2,j2=worldIdx===2?-10.0:-10.8;
 
   if(left){pl.vx=-SPD;pl.dir=-1;}else if(right){pl.vx=SPD;pl.dir=1;}else pl.vx*=0.72;
 
-  // salto: usamos _jh separado para touch y teclado
   const jHeld=keys['_jh']||touch._jh;
   if(jump&&!jHeld&&pl.jumps<2){
     pl.vy=pl.jumps===0?j1:j2;pl.jumps++;
@@ -288,6 +377,7 @@ function die(){
 
 const wx=x=>x-camX;
 
+// ── Draw ──────────────────────────────────────────────────
 function drawBG(){
   const sky=ctx.createLinearGradient(0,0,0,CH);
   sky.addColorStop(0,W.sky[0]);sky.addColorStop(1,W.sky[1]);
@@ -402,8 +492,7 @@ function drawClau(px,py,dir,frame,alive){
   ctx.fillStyle='rgba(255,255,255,0.7)';
   ctx.beginPath();ctx.arc(lx-5,ly-0.5,0.7,0,Math.PI*2);ctx.fill();
   ctx.beginPath();ctx.arc(lx+5,ly-0.5,0.7,0,Math.PI*2);ctx.fill();
-  ctx.restore();
-  ctx.restore();
+  ctx.restore();ctx.restore();
 }
 
 function drawProgress(){
@@ -446,19 +535,19 @@ function draw(){
     ctx.save();ctx.globalAlpha=0.65;ctx.fillStyle='#111';ctx.fillRect(0,0,CW,CH);ctx.restore();
     ctx.textAlign='center';
     if(worldIdx<2){
-      ctx.fillStyle='#FFD700';ctx.font='bold 30px Courier New,monospace';
+      ctx.fillStyle='#FFD700';ctx.font='bold 28px Courier New,monospace';
       ctx.fillText(`¡Clau lo logró! 🎉 Mundo ${worldIdx+1} superado`,CW/2,CH/2-20);
-      ctx.fillStyle='#fff';ctx.font='16px Courier New,monospace';
+      ctx.fillStyle='#fff';ctx.font='15px Courier New,monospace';
       ctx.fillText(`Cargando Mundo ${worldIdx+2}...`,CW/2,CH/2+14);
       const prog=Math.min(1,celebT/210);
       ctx.fillStyle='rgba(255,255,255,0.2)';ctx.beginPath();ctx.roundRect(CW/2-100,CH/2+34,200,10,5);ctx.fill();
       ctx.fillStyle='#FFD700';ctx.beginPath();ctx.roundRect(CW/2-100,CH/2+34,200*prog,10,5);ctx.fill();
     }else{
-      ctx.fillStyle='#FFD700';ctx.font='bold 32px Courier New,monospace';
+      ctx.fillStyle='#FFD700';ctx.font='bold 30px Courier New,monospace';
       ctx.fillText('¡FELICIDADES CLAU! 🏆',CW/2,CH/2-26);
-      ctx.fillStyle='#ffe066';ctx.font='bold 18px Courier New,monospace';
+      ctx.fillStyle='#ffe066';ctx.font='bold 17px Courier New,monospace';
       ctx.fillText('¡Superaste los 3 mundos!',CW/2,CH/2+8);
-      ctx.fillStyle='#fff';ctx.font='14px Courier New,monospace';
+      ctx.fillStyle='#fff';ctx.font='13px Courier New,monospace';
       ctx.fillText('🐣 ¡Clau es imparable! 🎀',CW/2,CH/2+34);
     }
     ctx.textAlign='left';drawFW();
@@ -466,12 +555,23 @@ function draw(){
   if(state==='final'){
     ctx.save();ctx.globalAlpha=0.75;ctx.fillStyle='#111';ctx.fillRect(0,0,CW,CH);ctx.restore();
     ctx.textAlign='center';
-    ctx.fillStyle='#FFD700';ctx.font='bold 34px Courier New,monospace';
-    ctx.fillText('¡FELICIDADES CLAU! 🏆',CW/2,CH/2-30);
-    ctx.fillStyle='#ffe066';ctx.font='bold 20px Courier New,monospace';
-    ctx.fillText('🎀 ¡Clau conquistó todo! 🎀',CW/2,CH/2+8);
+    ctx.fillStyle='#FFD700';ctx.font='bold 32px Courier New,monospace';
+    ctx.fillText('¡FELICIDADES CLAU! 🏆',CW/2,CH/2-40);
+    ctx.fillStyle='#ffe066';ctx.font='bold 18px Courier New,monospace';
+    ctx.fillText('🎀 ¡Clau conquistó todo! 🎀',CW/2,CH/2-4);
     ctx.fillStyle='#fff';ctx.font='13px Courier New,monospace';
-    ctx.fillText('Score: '+score+' pts  •  Mundos: 3/3',CW/2,CH/2+36);
+    ctx.fillText('Score: '+score+' pts  •  Mundos: 3/3',CW/2,CH/2+24);
+    // Botón jugar de nuevo (aparece tras 2 seg)
+    if(winT>120){
+      const bw=200,bh=38,bx=CW/2-bw/2,by=CH/2+50;
+      ctx.fillStyle='#FFD700';ctx.beginPath();ctx.roundRect(bx,by,bw,bh,10);ctx.fill();
+      ctx.fillStyle='#1a1a2e';ctx.font='bold 16px Courier New,monospace';
+      ctx.fillText('🐣 ¡Jugar de nuevo!',CW/2,by+25);
+      // guardar zona del botón para click/touch
+      window._restartBtn={x:bx,y:by,w:bw,h:bh};
+    } else {
+      window._restartBtn=null;
+    }
     ctx.textAlign='left';drawFW();
   }
   if(state==='dead'){
@@ -481,9 +581,28 @@ function draw(){
   }
 }
 
+function getCanvasPos(e){
+  const rect=cv.getBoundingClientRect();
+  const scaleX=CW/rect.width,scaleY=CH/rect.height;
+  const src=e.touches?e.touches[0]:e;
+  return{x:(src.clientX-rect.left)*scaleX,y:(src.clientY-rect.top)*scaleY};
+}
+function checkRestart(e){
+  if(state!=='final'||!window._restartBtn)return;
+  const{x,y}=getCanvasPos(e);
+  const b=window._restartBtn;
+  if(x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h){
+    lives=3;score=0;worldIdx=0;
+    loadWorld(0);pl=mkPl();inv=90;
+    state='playing';winT=0;fws=[];
+    setMsg('');setHUD();
+  }
+}
+cv.addEventListener('click',e=>{cv.focus();checkRestart(e);});
+cv.addEventListener('touchend',e=>{e.preventDefault();checkRestart(e);},{passive:false});
+
 function loop(){update();draw();requestAnimationFrame(loop);}
 cv.setAttribute('tabindex','0');cv.focus();
-cv.addEventListener('click',()=>cv.focus());
 loop();
 </script>
 </body>
