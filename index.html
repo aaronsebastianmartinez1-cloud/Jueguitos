@@ -574,19 +574,21 @@ function draw(){
 function getCanvasPos(e){
   const rect=cv.getBoundingClientRect();
   const scaleX=CW/rect.width,scaleY=CH/rect.height;
-  const src=e.touches?e.touches[0]:e;
+  // touchend: touches está vacío, usar changedTouches
+  const src=(e.changedTouches&&e.changedTouches[0])||(e.touches&&e.touches[0])||e;
   return{x:(src.clientX-rect.left)*scaleX,y:(src.clientY-rect.top)*scaleY};
+}
+function doRestart(){
+  lives=3;score=0;worldIdx=0;
+  loadWorld(0);pl=mkPl();inv=90;
+  state='playing';winT=0;fws=[];
+  setMsg('');setHUD();
 }
 function checkRestart(e){
   if(state!=='final'||!window._restartBtn)return;
   const{x,y}=getCanvasPos(e);
   const b=window._restartBtn;
-  if(x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h){
-    lives=3;score=0;worldIdx=0;
-    loadWorld(0);pl=mkPl();inv=90;
-    state='playing';winT=0;fws=[];
-    setMsg('');setHUD();
-  }
+  if(x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h) doRestart();
 }
 cv.addEventListener('click',e=>{cv.focus();checkRestart(e);});
 cv.addEventListener('touchend',e=>{e.preventDefault();checkRestart(e);},{passive:false});
