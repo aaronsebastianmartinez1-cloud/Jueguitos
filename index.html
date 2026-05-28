@@ -145,7 +145,8 @@
 
 <script>
 // ── Canvas setup ──────────────────────────────────────────
-const cv=document.getElementById('gc'),ctx=cv.getContext('2d');
+const cv=document.getElementById('gc'),ctx=cv.getContext('2d',{alpha:false});
+ctx.imageSmoothingEnabled=false;
 const CW=680,CH=380,WW=1700,GY=CH-60;
 const GRAV=0.68,SPD=4.2;
 
@@ -602,9 +603,16 @@ function checkRestart(e){
 cv.addEventListener('click',e=>{cv.focus();checkRestart(e);});
 cv.addEventListener('touchend',e=>{e.preventDefault();checkRestart(e);},{passive:false});
 
-function loop(){update();draw();requestAnimationFrame(loop);}
+const TARGET_FPS=60,FRAME_MS=1000/TARGET_FPS;
+let lastT=0;
+function loop(ts){
+  requestAnimationFrame(loop);
+  if(ts-lastT<FRAME_MS-1)return; // saltar frame si es muy pronto
+  lastT=ts;
+  update();draw();
+}
 cv.setAttribute('tabindex','0');cv.focus();
-loop();
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>
