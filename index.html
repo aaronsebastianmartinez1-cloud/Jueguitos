@@ -17,6 +17,8 @@ html,body{width:100%;height:100%;background:#1a1a2e;overflow:hidden;touch-action
 #msg{font-size:12px;font-weight:500;color:#fff;min-height:16px;text-align:center;text-shadow:0 1px 4px #000;z-index:10;}
 #ctrl{font-size:10px;color:#aaa;text-align:center;}
 #gc{display:block;border:3px solid #5a3e1b;border-radius:8px;image-rendering:pixelated;cursor:none;}
+.hud-btn{cursor:pointer;padding:2px 6px;border-radius:6px;user-select:none;-webkit-tap-highlight-color:transparent;transition:background 0.1s,transform 0.1s;}
+.hud-btn:active{background:rgba(255,215,0,0.18);transform:scale(0.88);}
 #touch-controls{display:none;position:fixed;bottom:0;left:0;right:0;pointer-events:none;z-index:20;padding:8px 12px;justify-content:space-between;align-items:flex-end;user-select:none;-webkit-user-select:none;}
 .btn-group{display:flex;gap:6px;pointer-events:all;}
 .tbtn{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.08);border:1.5px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;color:rgba(255,255,255,0.5);-webkit-tap-highlight-color:transparent;transition:background 0.08s;cursor:pointer;pointer-events:all;}
@@ -35,6 +37,8 @@ html,body{width:100%;height:100%;background:#1a1a2e;overflow:hidden;touch-action
     <span>🐣 <b id="hLives">3</b></span>
     <span>⭐ <b id="hScore">0</b></span>
     <span id="hWorld">🌍 Mundo 1</span>
+    <span class="hud-btn" id="btn-sound" title="Sonido">🔊</span>
+    <span class="hud-btn" id="btn-pause" title="Pausa">⏸</span>
   </div>
   <canvas id="gc" width="680" height="380"></canvas>
   <div id="msg"></div>
@@ -72,11 +76,75 @@ let enemies=[],projectiles=[],extraLife=null;
 let menuTick=0; // animación del menú
 
 const setMsg=t=>document.getElementById('msg').textContent=t;
+let bestScore=parseInt(localStorage.getItem('polliclau_best')||'0',10);
 const setHUD=()=>{
   document.getElementById('hLives').textContent=lives;
   document.getElementById('hScore').textContent=score;
   document.getElementById('hWorld').textContent='🌍 Mundo '+(worldIdx+1);
+  if(score>bestScore){bestScore=score;localStorage.setItem('polliclau_best',String(bestScore));}
 };
+
+// ── Sonido sintetizado (sin archivos externos) ──
+let actx=null, muted=localStorage.getItem('polliclau_muted')==='1';
+function ensureAudio(){ if(!actx){ try{actx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} } }
+function beep(freq,dur,type,vol,delay){
+  if(muted||!actx) return;
+  const t0=actx.currentTime+(delay||0);
+  const o=actx.createOscillator(), g=actx.createGain();
+  o.type=type||'square'; o.frequency.setValueAtTime(freq,t0);
+  g.gain.setValueAtTime(vol||0.08,t0);
+  g.gain.exponentialRampToValueAtTime(0.001,t0+dur);
+  o.connect(g); g.connect(actx.destination);
+  o.start(t0); o.stop(t0+dur+0.02);
+}
+const sfx={
+  jump:()=>beep(520,0.09,'square',0.06),
+  stomp:()=>{beep(180,0.07,'square',0.09);beep(340,0.06,'square',0.06,0.03);},
+  hurt:()=>{beep(220,0.18,'sawtooth',0.10);beep(120,0.22,'sawtooth',0.09,0.05);},
+  life:()=>{[660,880,1100].forEach((f,i)=>beep(f,0.09,'square',0.07,i*0.06));},
+  checkpoint:()=>beep(740,0.12,'sine',0.06),
+  win:()=>{[523,659,784,1047].forEach((f,i)=>beep(f,0.14,'square',0.08,i*0.09));},
+};
+function updateSoundBtn(){document.getElementById('btn-sound').textContent=muted?'🔇':'🔊';}
+updateSoundBtn();
+document.getElementById('btn-sound').addEventListener('click',e=>{
+  e.stopPropagation(); ensureAudio(); muted=!muted;
+  localStorage.setItem('polliclau_muted',muted?'1':'0'); updateSoundBtn();
+});
+
+// ── Pausa ──
+let paused=false;
+function togglePause(){
+  if(state!=='playing') return;
+  paused=!paused;
+  document.getElementById('btn-pause').textContent=paused?'▶':'⏸';
+}
+document.getElementById('btn-pause').addEventListener('click',e=>{e.stopPropagation();ensureAudio();togglePause();});
+
+// ── Partículas de polvo ──
+let dust=[];
+function spawnDust(wx2,wy2,n,spread){
+  spread=spread||1;
+  for(let i=0;i<n;i++){
+    dust.push({wx:wx2+(Math.random()-0.5)*10*spread,wy:wy2,
+      vx:(Math.random()-0.5)*1.6*spread,vy:-Math.random()*1.3-0.3,
+      life:1,sz:2+Math.random()*2.2});
+  }
+}
+function tickDust(){dust.forEach(d=>{d.wx+=d.vx;d.wy+=d.vy;d.vy+=0.05;d.life-=0.035;});dust=dust.filter(d=>d.life>0);}
+function drawDust(){
+  dust.forEach(d=>{
+    const sx=wx(d.wx);if(sx<-10||sx>CW+10)return;
+    ctx.save();ctx.globalAlpha=Math.max(0,d.life*0.55);
+    ctx.fillStyle='rgba(255,255,255,0.85)';
+    ctx.beginPath();ctx.arc(sx,d.wy,d.sz*d.life,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  });
+}
+
+// ── Sacudida de cámara ──
+let shakeT=0,shakeMag=0;
+function shake(mag,t){shakeMag=Math.max(shakeMag,mag);shakeT=Math.max(shakeT,t);}
 
 // ── Fuegos artificiales ──────────────────────────
 function spawnFW(wx2,wy){
@@ -432,6 +500,7 @@ window.addEventListener('keydown',e=>{
   if(state==='menu'&&(e.code==='Space'||e.code==='Enter'||e.code==='KeyW'||e.code==='ArrowUp')){
     startGame();
   }
+  if((e.code==='KeyP'||e.code==='Escape')&&state==='playing'){ togglePause(); }
 });
 window.addEventListener('keyup',e=>keys[e.code]=false);
 const touch={left:false,right:false,jump:false,_jh:false};
@@ -454,15 +523,19 @@ const isJump=()=>keys['Space']||keys['ArrowUp']||keys['KeyW']||touch.jump;
 
 // ── Inicio de juego ──────────────────────────────
 function startGame(){
+  ensureAudio();
   state='playing';
   lives=3; score=0; worldIdx=0;
   loadWorld(0); pl=mkPl(); inv=90;
-  fws=[]; setMsg(''); setHUD();
+  fws=[]; dust=[]; paused=false;
+  document.getElementById('btn-pause').textContent='⏸';
+  setMsg(''); setHUD();
 }
 
 // ── Enemigos ─────────────────────────────────────
 function stompEnemy(e){
   pl.vy=-10; pl.jumps=1; inv=10;
+  shake(2,5); sfx.stomp(); spawnDust(e.x+16,e.y+16,5,1);
   e.hpCur--;
   e.dmgFlash=18;
   if(e.hpCur<=0){
@@ -522,6 +595,7 @@ function updateEnemies(){
 
 // ── Update principal ─────────────────────────────
 function update(){
+  if(paused) return;
   // ── MENÚ: solo animar fuegos artificiales decorativos ──
   if(state==='menu'){
     menuTick++;
@@ -550,6 +624,7 @@ function update(){
   if(state==='final'){winT++;if(winT%10===0)spawnFW(100+Math.random()*480,40+Math.random()*160);tickFW();return;}
 
   if(inv>0) inv--;
+  tickDust();
 
   const movPlat=p=>{p.x+=p.spd*p.dir;if(p.x>p.ox+p.range||p.x<p.ox)p.dir*=-1;};
   movPlat(mp); if(mp2)movPlat(mp2); if(mp3)movPlat(mp3);
@@ -560,18 +635,22 @@ function update(){
 
   if(jump&&!keys['_jh']&&!touch._jh&&pl.jumps<2){
     pl.vy=pl.jumps===0?j1:j2; pl.jumps++;
+    spawnDust(pl.x+pl.w/2,pl.y+pl.h,6,1.1); sfx.jump();
     if(touch.jump)touch._jh=true; else keys['_jh']=true;
   }
   if(!touch.jump)touch._jh=false;
   if(!keys['Space']&&!keys['ArrowUp']&&!keys['KeyW'])keys['_jh']=false;
 
+  const wasGround=pl.onGround;
   pl.vy+=GRAV; if(pl.vy>18)pl.vy=18;
   pl.x+=pl.vx; pl.y+=pl.vy;
   if(pl.x<0)pl.x=0; if(pl.x+pl.w>WW)pl.x=WW-pl.w;
   resolve(); spikeHit();
+  if(!wasGround&&pl.onGround) spawnDust(pl.x+pl.w/2,pl.y+pl.h,7,1.2);
 
   if(worldIdx===3&&checkpointX!==null&&!checkpointActive&&pl.x>checkpointX+20){
     checkpointActive=true;
+    sfx.checkpoint();
     setMsg('✅ ¡Checkpoint activado!');
     setTimeout(()=>setMsg(''),2000);
   }
@@ -581,6 +660,7 @@ function update(){
     if(rc(pl.x,pl.y,pl.w,pl.h,extraLife.x-10,extraLife.y-10,26,26)){
       extraLife.collected=true;
       lives++; setHUD();
+      sfx.life();
       spawnFW(extraLife.x+6, extraLife.y+6);
       setMsg('🩷 ¡+1 Vida extra!');
       setTimeout(()=>setMsg(''),2000);
@@ -594,13 +674,14 @@ function update(){
   if(ns>score){score=ns;setHUD();}
   pl.ft++; if(Math.abs(pl.vx)>0.5&&pl.onGround&&pl.ft%9===0)pl.frame++;
   if(!pl.onGround)pl.frame=1;
+  if(Math.abs(pl.vx)>1.5&&pl.onGround&&pl.ft%7===0) spawnDust(pl.x+pl.w/2,pl.y+pl.h-2,1,0.6);
 
   camX+=(pl.x-CW*0.32-camX)*0.12;
   camX=Math.max(0,Math.min(WW-CW,camX));
 
   const g=W.goal;
   if(rc(pl.x,pl.y,pl.w,pl.h,g.x,g.y,g.w,g.h+12)){
-    state='win'; celebT=0;
+    state='win'; celebT=0; sfx.win();
     if(worldIdx<5)setMsg(`¡Clau llegó! 🎉 Mundo ${worldIdx+1} superado. ¡Vamos al ${worldIdx+2}!`);
     else setMsg('¡Lo lograste, Clau! 🏆 ¡Los 6 mundos conquistados!');
     for(let i=0;i<5;i++)spawnFW(100+Math.random()*480,40+Math.random()*200);
@@ -610,6 +691,8 @@ function update(){
 function die(){
   if(state!=='playing'||inv>0) return;
   pl.alive=false; lives--;
+  shake(7,16); sfx.hurt();
+  if(navigator.vibrate) navigator.vibrate(120);
   state='dead'; deathT=lives<=0?220:140;
   const frases=[
     '¡Tú puedes, Clau! 💪','¡Clau no se rinde! 🎀','¡Arriba ese ánimo, Clau! 🐣',
@@ -985,7 +1068,7 @@ function drawMenu(){
   // Instrucciones
   txt('← → Mover   |   Espacio / ↑ Saltar (Si clau, puedes saltar doble jajaja)',CW/2,270,'#88bbdd','12px Courier New,monospace',0.4,1);
   txt('Brinca encima para matar gusanos   |   Recoge vidas extra',CW/2,288,'#88bbdd','11px Courier New,monospace',0.4,1);
-  txt('Suerte',CW/2,306,'rgba(100,140,180,0.7)','10px Courier New,monospace',0.3,1);
+  txt(bestScore>0?('🏆 Mejor puntaje: '+bestScore+' pts'):'Suerte',CW/2,306,bestScore>0?'#FFD700':'rgba(100,140,180,0.7)','bold 11px Courier New,monospace',0.35,1);
 
   // Separador
   ctx.strokeStyle='rgba(255,215,0,0.15)';
@@ -1014,14 +1097,21 @@ function draw(){
   }
 
   // ── JUEGO NORMAL ──
+  ctx.save();
+  if(shakeT>0){
+    ctx.translate((Math.random()-0.5)*shakeMag,(Math.random()-0.5)*shakeMag);
+    shakeT--; if(shakeT<=0)shakeMag=0;
+  }
   drawBG();drawPlats();drawSpikes();
   drawCheckpoint();
   drawExtraLife();
   drawGoal();
   for(const e of enemies){if(e.alive)drawWorm(e);}
   drawProjectiles();
+  drawDust();
   drawClau(pl.x,pl.y,pl.dir,pl.frame,pl.alive);
   drawProgress();drawFW();
+  ctx.restore();
 
   function txt(t,x,y,fill,font,shadow='rgba(0,0,0,0.7)',sOff=3){
     ctx.font=font;ctx.textAlign='center';
@@ -1069,6 +1159,13 @@ function draw(){
     if(checkpointActive)txt('↩ Volviendo al checkpoint...',CW/2,CH/2+58,'#88ff88','bold 12px Courier New,monospace');
     ctx.textAlign='left';
   }
+
+  if(paused){
+    ctx.save();ctx.globalAlpha=0.58;ctx.fillStyle='#000';ctx.fillRect(0,0,CW,CH);ctx.restore();
+    txt('⏸ PAUSA',CW/2,CH/2-8,'#FFD700','bold 36px Courier New,monospace');
+    txt('Presiona P / Esc o toca ⏸ para continuar',CW/2,CH/2+28,'#fff','bold 13px Courier New,monospace');
+    ctx.textAlign='left';
+  }
 }
 
 function getCanvasPos(e){
@@ -1080,7 +1177,7 @@ function getCanvasPos(e){
 
 function doRestart(){
   lives=3;score=0;worldIdx=0;loadWorld(0);pl=mkPl();inv=90;
-  state='menu'; winT=0;fws=[];menuTick=0;setMsg('');setHUD();
+  state='menu'; winT=0;fws=[];dust=[];paused=false;menuTick=0;setMsg('');setHUD();
 }
 
 function checkClick(e){
