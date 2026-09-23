@@ -17,6 +17,8 @@ const sfx={
   hurt:()=>{beep(220,0.18,'sawtooth',0.10);beep(120,0.22,'sawtooth',0.09,0.05);},
   life:()=>{[660,880,1100].forEach((f,i)=>beep(f,0.09,'square',0.07,i*0.06));},
   checkpoint:()=>beep(740,0.12,'sine',0.06),
+  key:()=>{[880,1200].forEach((f,i)=>beep(f,0.08,'square',0.06,i*0.05));},
+  meteor:()=>beep(140,0.08,'sawtooth',0.05),
   win:()=>{[523,659,784,1047].forEach((f,i)=>beep(f,0.14,'square',0.08,i*0.09));},
 };
 function updateSoundBtn(){document.getElementById('btn-sound').textContent=muted?'🔇':'🔊';}

@@ -14,7 +14,7 @@ function drawDust(){
     const sx=wx(d.wx);if(sx<-10||sx>CW+10)return;
     ctx.save();ctx.globalAlpha=Math.max(0,d.life*0.55);
     ctx.fillStyle='rgba(255,255,255,0.85)';
-    ctx.beginPath();ctx.arc(sx,d.wy,d.sz*d.life,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(sx,wy(d.wy),d.sz*d.life,0,Math.PI*2);ctx.fill();
     ctx.restore();
   });
 }
@@ -57,7 +57,7 @@ function drawFW(){
       if(p.life<=0)return;
       // En el menú los fuegos no usan camX (wx), son coordenadas de pantalla directas
       const sx = (state==='menu') ? (fw.wx+p.px) : wx(fw.wx+p.px);
-      const sy=fw.wy+p.py;
+      const sy = (state==='menu') ? (fw.wy+p.py) : wy(fw.wy+p.py);
       if(sx<-10||sx>CW+10)return;
       ctx.save();ctx.globalAlpha=Math.max(0,p.life*fw.life);
       ctx.fillStyle=p.col;

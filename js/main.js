@@ -1,13 +1,14 @@
 // ── main.js — loop principal, estados y navegación ──
 
-// ── Inicio de juego (Tierra) ──────────────────────
-function startGame(){
+// ── Inicio de juego ────────────────────────────────
+function startGame(p){
   ensureAudio();
-  state='playing';
+  planet=p||'tierra';
   lives=3; score=0; worldIdx=0;
   loadWorld(0); pl=mkPl(); inv=90;
   fws=[]; dust=[]; paused=false;
   document.getElementById('btn-pause').textContent='⏸';
+  state=W.intro?'worldIntro':'playing';
   setMsg(''); setHUD();
 }
 
@@ -66,6 +67,9 @@ function update(){
   // ── SELECCIÓN DE PLANETAS: pantalla estática ──
   if(state==='planetSelect') return;
 
+  // ── PREMISA / REQUISITO DE MUNDO: juego congelado detrás ──
+  if(state==='worldIntro') return;
+
   // ── DIÁLOGO DE SALIDA: juego congelado detrás ──
   if(state==='exitConfirm') return;
 
@@ -88,14 +92,19 @@ function update(){
     winT++; if(winT%10===0) spawnFW(100+Math.random()*480,40+Math.random()*160);
     tickFW();
     if(++celebT>210){
-      if(worldIdx<5){worldIdx++;loadWorld(worldIdx);pl=mkPl();inv=90;state='playing';setMsg('');setHUD();}
-      else state='final';
+      const tw=worldCount();
+      if(worldIdx<tw-1){
+        worldIdx++;loadWorld(worldIdx);pl=mkPl();inv=90;
+        state=W.intro?'worldIntro':'playing';
+        setMsg('');setHUD();
+      }else state='final';
     }
     return;
   }
   if(state==='final'){winT++;if(winT%10===0)spawnFW(100+Math.random()*480,40+Math.random()*160);tickFW();return;}
 
   if(inv>0) inv--;
+  if(lockMsgCd>0) lockMsgCd--;
   tickDust();
 
   const movPlat=p=>{p.x+=p.spd*p.dir;if(p.x>p.ox+p.range||p.x<p.ox)p.dir*=-1;};
@@ -127,19 +136,22 @@ function update(){
     setTimeout(()=>setMsg(''),2000);
   }
 
-  if(extraLife&&!extraLife.collected){
-    extraLife.pulse+=0.1;
-    if(rc(pl.x,pl.y,pl.w,pl.h,extraLife.x-10,extraLife.y-10,26,26)){
-      extraLife.collected=true;
+  for(const el of extraLives){
+    if(el.collected) continue;
+    el.pulse+=0.1;
+    if(rc(pl.x,pl.y,pl.w,pl.h,el.x-10,el.y-10,26,26)){
+      el.collected=true;
       lives++; setHUD();
       sfx.life();
-      spawnFW(extraLife.x+6, extraLife.y+6);
+      spawnFW(el.x+6, el.y+6);
       setMsg('🩷 ¡+1 Vida extra!');
       setTimeout(()=>setMsg(''),2000);
     }
   }
 
   updateEnemies();
+  updateMeteors();
+  updateKeys();
   if(pl.y>CH+40) die();
 
   const ns=Math.max(score,Math.floor((pl.x/WW)*100)+(worldIdx*100));
@@ -151,12 +163,29 @@ function update(){
   camX+=(pl.x-CW*0.32-camX)*0.12;
   camX=Math.max(0,Math.min(WW-CW,camX));
 
+  // La cámara vertical solo entra en acción cuando Clau escala más arriba de
+  // lo que cualquier nivel normal necesita (umbral por debajo de todo lo
+  // existente), así que niveles sin torres altas se ven exactamente igual.
+  const camYTarget=Math.min(0,pl.y-15);
+  camY+=(camYTarget-camY)*0.12;
+  if(camY>0)camY=0;
+
   const g=W.goal;
+  const goalLocked=!!(W.keyGate&&keysCollected<pickupKeys.length);
   if(rc(pl.x,pl.y,pl.w,pl.h,g.x,g.y,g.w,g.h+12)){
-    state='win'; celebT=0; sfx.win();
-    if(worldIdx<5)setMsg(`¡Clau llegó! 🎉 Mundo ${worldIdx+1} superado. ¡Vamos al ${worldIdx+2}!`);
-    else setMsg('¡Lo lograste, Clau! 🏆 ¡Los 6 mundos conquistados!');
-    for(let i=0;i<5;i++)spawnFW(100+Math.random()*480,40+Math.random()*200);
+    if(goalLocked){
+      if(lockMsgCd<=0){
+        setMsg('🔒 Necesitas las 4 llaves para pasar');
+        lockMsgCd=110;
+        setTimeout(()=>setMsg(''),1500);
+      }
+    }else{
+      state='win'; celebT=0; sfx.win();
+      const tw=worldCount();
+      if(worldIdx<tw-1)setMsg(`¡Clau llegó! 🎉 Mundo ${worldIdx+1} superado. ¡Vamos al ${worldIdx+2}!`);
+      else setMsg(planet==='marte'?'¡Lo lograste, Clau! 🏆 ¡Marte está a salvo!':'¡Lo lograste, Clau! 🏆 ¡Los 6 mundos conquistados!');
+      for(let i=0;i<5;i++)spawnFW(100+Math.random()*480,40+Math.random()*200);
+    }
   }
 }
 
@@ -185,9 +214,11 @@ function draw(){
   drawBG();drawPlats();drawSpikes();
   drawCheckpoint();
   drawExtraLife();
+  drawPickupKeys();
   drawGoal();
-  for(const e of enemies){if(e.alive)drawWorm(e);}
+  for(const e of enemies){if(e.alive)(e.kind==='alien'?drawAlien(e):drawWorm(e));}
   drawProjectiles();
+  drawMeteors();
   drawDust();
   drawClau(pl.x,pl.y,pl.dir,pl.frame,pl.alive);
   drawProgress();drawFW();
@@ -201,7 +232,7 @@ function draw(){
 
   if(state==='win'){
     ctx.save();ctx.globalAlpha=0.7;ctx.fillStyle='#111';ctx.fillRect(0,0,CW,CH);ctx.restore();
-    if(worldIdx<5){
+    if(worldIdx<worldCount()-1){
       txt(`🎉 ¡Mundo ${worldIdx+1} superado!`,CW/2,CH/2-28,'#FFD700','bold 34px Courier New,monospace');
       txt(`¡Vamos al Mundo ${worldIdx+2}, Clau! ⭐`,CW/2,CH/2+20,'#fff','bold 20px Courier New,monospace');
       const bar=Math.min(1,celebT/210);
@@ -209,7 +240,7 @@ function draw(){
       ctx.fillStyle='#FFD700';ctx.beginPath();ctx.roundRect(CW/2-120,CH/2+44,240*bar,12,6);ctx.fill();
     }else{
       txt('¡FELICIDADES CLAU! 🏆',CW/2,CH/2-30,'#FFD700','bold 32px Courier New,monospace');
-      txt('¡Superaste los 6 mundos!',CW/2,CH/2+14,'#ffe066','bold 22px Courier New,monospace');
+      txt(planet==='marte'?'¡Superaste los 3 mundos de Marte!':'¡Superaste los 6 mundos!',CW/2,CH/2+14,'#ffe066','bold 22px Courier New,monospace');
       txt('🐣 ¡Clau es la campeona! 🎀',CW/2,CH/2+46,'#fff','bold 16px Courier New,monospace');
     }
     ctx.textAlign='left';drawFW();
@@ -217,10 +248,11 @@ function draw(){
 
   if(state==='final'){
     ctx.save();ctx.globalAlpha=0.78;ctx.fillStyle='#111';ctx.fillRect(0,0,CW,CH);ctx.restore();
+    const tw=worldCount();
     txt('¡FELICIDADES CLAU! 🏆',CW/2,CH/2-52,'#FFD700','bold 34px Courier New,monospace');
-    txt('🎀 ¡Clau conquistó los 6 mundos! 🎀',CW/2,CH/2-8,'#ffe066','bold 20px Courier New,monospace');
-    txt('Score: '+score+' pts  •  Mundos: 6/6',CW/2,CH/2+28,'#fff','bold 17px Courier New,monospace');
-    txt('🪱 ¡Ningún gusano pudo con Clau! 🐣',CW/2,CH/2+52,'#aaffaa','bold 14px Courier New,monospace');
+    txt(planet==='marte'?'🔴 ¡Clau protegió Marte! 🔴':'🎀 ¡Clau conquistó los 6 mundos! 🎀',CW/2,CH/2-8,'#ffe066','bold 20px Courier New,monospace');
+    txt(`Score: ${score} pts  •  Mundos: ${tw}/${tw}`,CW/2,CH/2+28,'#fff','bold 17px Courier New,monospace');
+    txt(planet==='marte'?'👽 ¡Ningún marciano pudo con Clau! 🐣':'🪱 ¡Ningún gusano pudo con Clau! 🐣',CW/2,CH/2+52,'#aaffaa','bold 14px Courier New,monospace');
     if(winT>120){
       const bw=270,bh=50,bx=CW/2-bw/2,by=CH/2+68;
       ctx.fillStyle='rgba(0,0,0,0.35)';ctx.beginPath();ctx.roundRect(bx+3,by+3,bw,bh,14);ctx.fill();
@@ -242,6 +274,7 @@ function draw(){
 
   if(state==='gameover'){ drawGameOver(); }
   if(state==='exitConfirm'){ drawExitConfirm(); }
+  if(state==='worldIntro'){ drawWorldIntro(); }
 
   if(paused){
     ctx.save();ctx.globalAlpha=0.58;ctx.fillStyle='#000';ctx.fillRect(0,0,CW,CH);ctx.restore();
@@ -272,9 +305,18 @@ function checkClick(e){
   // Tarjetas de selección de planeta
   if(state==='planetSelect'&&window._planetBtns){
     const pb=window._planetBtns;
-    if(hit(pb.tierra,x,y)){ startGame(); return; }
-    if(hit(pb.marte,x,y)){ setMsg('🚀 Marte: ¡Próximamente!'); setTimeout(()=>setMsg(''),1500); return; }
+    if(hit(pb.tierra,x,y)){ startGame('tierra'); return; }
+    if(hit(pb.marte,x,y)){
+      if(PLANET_MARTE.available){ startGame('marte'); }
+      else { setMsg('🚀 Marte: ¡Próximamente!'); setTimeout(()=>setMsg(''),1500); }
+      return;
+    }
     if(hit(pb.mercurio,x,y)){ setMsg('☄️ Mercurio: ¡Próximamente!'); setTimeout(()=>setMsg(''),1500); return; }
+  }
+
+  // Premisa / requisito de mundo → continuar
+  if(state==='worldIntro'&&window._introBtn){
+    if(hit(window._introBtn,x,y)){ state='playing'; return; }
   }
 
   // Diálogo de confirmación de salida
@@ -291,7 +333,7 @@ function checkClick(e){
   // Pantalla de Game Over
   if(state==='gameover'&&window._gameoverBtns){
     const gb=window._gameoverBtns;
-    if(hit(gb.tierra,x,y)){ startGame(); return; }
+    if(hit(gb.replay,x,y)){ startGame(planet); return; }
     if(hit(gb.planets,x,y)){ state='planetSelect'; return; }
   }
 

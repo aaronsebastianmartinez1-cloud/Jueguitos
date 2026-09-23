@@ -1,9 +1,9 @@
 // ── planets/tierra.js — datos de los 6 mundos de Tierra ──
 // (Migrado tal cual del index.html original: plataformas, picos,
 //  plataformas móviles, enemigos y meta de cada mundo)
-const WWS=[1800,1800,1800,1900,2400,2600];
+const TIERRA_WWS=[1800,1800,1800,1900,2400,2600];
 
-const WORLDS=[
+const TIERRA_WORLDS=[
 // ══════════ MUNDO 1 – Pradera ══════════
 {
   sky:['#3db5e8','#c5ecf8'],ground:'#8bc34a',gline:'#5a8a3f',

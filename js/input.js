@@ -7,6 +7,9 @@ window.addEventListener('keydown',e=>{
   if(state==='menu'&&(e.code==='Space'||e.code==='Enter'||e.code==='KeyW'||e.code==='ArrowUp')){
     state='planetSelect';
   }
+  if(state==='worldIntro'&&(e.code==='Space'||e.code==='Enter')){
+    state='playing';
+  }
   if((e.code==='KeyP'||e.code==='Escape')&&state==='playing'){ togglePause(); }
   if(e.code==='Escape'&&state==='exitConfirm'){ state='playing'; }
 });

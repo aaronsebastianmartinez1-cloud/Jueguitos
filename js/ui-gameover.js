@@ -20,12 +20,12 @@ function drawGameOver(){
     ctx.fillStyle='#1a1a2e';ctx.font='bold 15px Courier New,monospace';ctx.textAlign='center';
     ctx.fillText(label,CW/2,y+30);
   }
-  btn(by1,'🐣 Volver a jugar Tierra','#FFD700');
+  btn(by1,planet==='marte'?'🔴 Volver a jugar Marte':'🐣 Volver a jugar Tierra','#FFD700');
   btn(by2,'🌍 Volver a planetas','#88bbdd');
   ctx.textAlign='left';
 
   window._gameoverBtns={
-    tierra:{x:bx,y:by1,w:bw,h:bh},
+    replay:{x:bx,y:by1,w:bw,h:bh},
     planets:{x:bx,y:by2,w:bw,h:bh},
   };
 }

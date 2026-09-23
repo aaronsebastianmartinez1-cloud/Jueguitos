@@ -1,40 +1,59 @@
 // ── state.js — estado central del juego, carga de mundos y jugador ──
 let WW=1800;
+let planet='tierra';
 let worldIdx=0,state='menu',lives=3,score=0,deathT=0;
-let winT=0,inv=0,camX=0,celebT=0,deathMsg='';
+let winT=0,inv=0,camX=0,camY=0,celebT=0,deathMsg='';
 let checkpointX=null,checkpointActive=false;
-let enemies=[],projectiles=[],extraLife=null;
+let enemies=[],projectiles=[],extraLives=[];
+let meteors=[],meteorState=[],pickupKeys=[],keysCollected=0,lockMsgCd=0;
 let menuTick=0; // animación del menú
 let paused=false;
+
+function worldCount(){return planet==='marte'?3:6;}
 
 const setMsg=t=>document.getElementById('msg').textContent=t;
 let bestScore=parseInt(localStorage.getItem('polliclau_best')||'0',10);
 const setHUD=()=>{
   document.getElementById('hLives').textContent=lives;
   document.getElementById('hScore').textContent=score;
-  document.getElementById('hWorld').textContent='🌍 Mundo '+(worldIdx+1);
+  document.getElementById('hWorld').textContent=(planet==='marte'?'🔴 Mundo ':'🌍 Mundo ')+(worldIdx+1);
+  const keysEl=document.getElementById('hKeys');
+  if(keysEl){
+    if(W&&W.keyGate){
+      keysEl.style.display='';
+      document.getElementById('hKeysCount').textContent=keysCollected;
+      document.getElementById('hKeysTotal').textContent=pickupKeys.length;
+    }else keysEl.style.display='none';
+  }
   if(score>bestScore){bestScore=score;localStorage.setItem('polliclau_best',String(bestScore));}
 };
 
 // ── Runtime del mundo actual ──────────────────────
 let W,mp,mp2,mp3;
 function loadWorld(idx){
-  W=WORLDS[idx];
-  WW=WWS[idx];
+  const worldsArr=planet==='marte'?MARTE_WORLDS:TIERRA_WORLDS;
+  const wwsArr=planet==='marte'?MARTE_WWS:TIERRA_WWS;
+  W=worldsArr[idx];
+  WW=wwsArr[idx];
   mp=Object.assign({},W.mp);
   mp2=W.mp2?Object.assign({},W.mp2):null;
   mp3=W.mp3?Object.assign({},W.mp3):null;
-  camX=0; winT=0; celebT=0; fws=[];
+  camX=0; camY=0; winT=0; celebT=0; fws=[];
   enemies=W.enemyDefs.map(d=>({
     ...d, hpCur:d.hp,
     shootTimer:Math.floor(Math.random()*(d.shootCd||80)+20),
     alive:true, frame:0, ft:0, dmgFlash:0,
   }));
   projectiles=[];
-  extraLife={...W.elDef, collected:false, pulse:0};
+  const elDefsArr=W.elDefs||(W.elDef?[W.elDef]:[]);
+  extraLives=elDefsArr.map(d=>({...d, collected:false, pulse:Math.random()*10}));
   checkpointX=null; checkpointActive=false;
   if(W.checkpoint) checkpointX=W.checkpoint.x;
-  document.getElementById('hWorld').textContent='🌍 Mundo '+(idx+1);
+  meteors=[];
+  meteorState=W.meteorCols?W.meteorCols.map(c=>({x:c.x,cd:c.cd||100,timer:(c.cd||100)+(Math.random()*40|0)})):[];
+  pickupKeys=W.keyDefs?W.keyDefs.map(k=>({...k,collected:false,pulse:Math.random()*10})):[];
+  keysCollected=0; lockMsgCd=0;
+  document.getElementById('hWorld').textContent=(planet==='marte'?'🔴 Mundo ':'🌍 Mundo ')+(idx+1);
 }
 loadWorld(0);
 

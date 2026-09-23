@@ -22,7 +22,7 @@ function drawExitConfirm(){
 
   ctx.textAlign='center';
   ctx.fillStyle='#fff';ctx.font='bold 15px Courier New,monospace';
-  wrapText('¿Segura que deseas salir de Tierra, Clau?',CW/2,by+38,bw-40,20);
+  wrapText(`¿Segura que deseas salir de ${planet==='marte'?'Marte':'Tierra'}, Clau?`,CW/2,by+38,bw-40,20);
 
   const bbw=130,bbh=42,gap=16;
   const nx=CW/2-bbw-gap/2, yx=CW/2+gap/2;

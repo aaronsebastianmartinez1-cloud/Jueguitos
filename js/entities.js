@@ -8,6 +8,15 @@ function stompEnemy(e){
     e.alive=false;
     score+=50+worldIdx*20; setHUD();
     spawnFW(e.x+16, e.y-10);
+    if(e.guardsKeyIdx!==undefined&&pickupKeys[e.guardsKeyIdx]){
+      const k=pickupKeys[e.guardsKeyIdx];
+      if(k.locked){
+        k.locked=false; k.x=e.x+16; k.y=e.y;
+        sfx.key();
+        setMsg('🔑 ¡El marciano soltó la última llave!');
+        setTimeout(()=>setMsg(''),1800);
+      }
+    }
   }
 }
 
@@ -21,6 +30,13 @@ function updateEnemies(){
     }else{
       if(e.x>e.ox+e.range){e.x=e.ox+e.range;e.dir=-1;}
       else if(e.x<e.ox){e.x=e.ox;e.dir=1;}
+    }
+    if(e.jumpAlien){
+      if(e.baseY===undefined){e.baseY=e.y;e.vy=0;e.jumpTimer=60+(Math.random()*80|0);}
+      e.jumpTimer--;
+      if(e.jumpTimer<=0&&e.y>=e.baseY-1){e.vy=-4.2;e.jumpTimer=75+(Math.random()*90|0);}
+      e.vy+=0.42; e.y+=e.vy;
+      if(e.y>e.baseY){e.y=e.baseY;e.vy=0;}
     }
     if(e.dmgFlash>0) e.dmgFlash--;
     e.ft++; if(e.ft%8===0) e.frame=(e.frame+1)%4;
