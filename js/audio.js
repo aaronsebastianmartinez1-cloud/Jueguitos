@@ -19,6 +19,9 @@ const sfx={
   checkpoint:()=>beep(740,0.12,'sine',0.06),
   key:()=>{[880,1200].forEach((f,i)=>beep(f,0.08,'square',0.06,i*0.05));},
   meteor:()=>beep(140,0.08,'sawtooth',0.05),
+  chest:()=>{[440,660,990,1320].forEach((f,i)=>beep(f,0.1,'triangle',0.08,i*0.07));},
+  gift:()=>{[392,330,262,196].forEach((f,i)=>beep(f,0.22,'triangle',0.07,i*0.16));[660,880,1100].forEach((f,i)=>beep(f,0.09,'square',0.05,0.75+i*0.06));},
+  geyser:()=>{beep(90,0.25,'sawtooth',0.05);beep(60,0.3,'sawtooth',0.04,0.05);},
   win:()=>{[523,659,784,1047].forEach((f,i)=>beep(f,0.14,'square',0.08,i*0.09));},
 };
 function updateSoundBtn(){document.getElementById('btn-sound').textContent=muted?'🔇':'🔊';}

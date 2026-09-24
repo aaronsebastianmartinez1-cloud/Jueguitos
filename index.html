@@ -13,14 +13,16 @@
     <span>🐣 <b id="hLives">3</b></span>
     <span>⭐ <b id="hScore">0</b></span>
     <span id="hWorld">🌍 Mundo 1</span>
-    <span id="hKeys" style="display:none">🔑 <b id="hKeysCount">0</b>/<b id="hKeysTotal">4</b></span>
+    <span id="hKeys" style="display:none">🔑 <b id="hKeysCount">0</b><span id="hKeysOf">/<b id="hKeysTotal">4</b></span></span>
+    <span id="hFrags" style="display:none">🪖 <b id="hFragsCount">0</b>/<b id="hFragsTotal">4</b></span>
     <span class="hud-btn" id="btn-sound" title="Sonido">🔊</span>
     <span class="hud-btn" id="btn-pause" title="Pausa">⏸</span>
     <span class="hud-btn" id="btn-exit" title="Salir">🚪</span>
   </div>
   <canvas id="gc" width="680" height="380"></canvas>
+  <button id="btn-open" type="button">🔓 Abrir</button>
   <div id="msg"></div>
-  <div id="ctrl">← → Mover &nbsp;|&nbsp; Espacio/↑ Saltar (doble salto) &nbsp;|&nbsp; 🪱 Brinca encima para matar gusanos &nbsp;|&nbsp; 🩷 Recoge vidas extra</div>
+  <div id="ctrl">← → Mover &nbsp;|&nbsp; Espacio/↑ Saltar (doble salto) &nbsp;|&nbsp; 🪱 Brinca encima para matar gusanos &nbsp;|&nbsp; 🩷 Recoge vidas extra &nbsp;|&nbsp; E / ↓ Abrir cofre</div>
   <div id="touch-controls">
     <div class="tzone" id="zone-move">
       <div class="tbtn" id="btn-left">◀</div>
@@ -48,11 +50,13 @@
 <script src="js/entities.js"></script>
 <script src="js/render.js"></script>
 <script src="js/hazards.js"></script>
+<script src="js/maze.js"></script>
 <script src="js/ui-menu.js"></script>
 <script src="js/ui-planet-select.js"></script>
 <script src="js/ui-gameover.js"></script>
 <script src="js/ui-exit-confirm.js"></script>
 <script src="js/ui-world-intro.js"></script>
 <script src="js/main.js"></script>
+<script src="js/tester.js"></script>
 </body>
 </html>

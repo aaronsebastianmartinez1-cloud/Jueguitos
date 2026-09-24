@@ -4,7 +4,7 @@
 function startGame(p){
   ensureAudio();
   planet=p||'tierra';
-  lives=3; score=0; worldIdx=0;
+  lives=3; score=0; worldIdx=0; carriedKeys=0;
   loadWorld(0); pl=mkPl(); inv=90;
   fws=[]; dust=[]; paused=false;
   document.getElementById('btn-pause').textContent='⏸';
@@ -12,8 +12,16 @@ function startGame(p){
   setMsg(''); setHUD();
 }
 
+// Vidas de regalo al empezar un mundo (solo una vez por entrada al mundo)
+function giveWorldBonus(){
+  if(!W.bonusLives) return;
+  lives+=W.bonusLives; setHUD();
+  // Cartel tétrico: aparece cuando Clau empieza a jugar (tras el aviso del mundo)
+  banner={t:0,dur:300,gift:W.bonusLives};
+}
+
 function doRestart(){
-  lives=3;score=0;worldIdx=0;loadWorld(0);pl=mkPl();inv=90;
+  lives=3;score=0;worldIdx=0;carriedKeys=0;loadWorld(0);pl=mkPl();inv=90;
   state='menu'; winT=0;fws=[];dust=[];paused=false;menuTick=0;setMsg('');setHUD();
 }
 
@@ -36,7 +44,7 @@ document.getElementById('btn-exit').addEventListener('click',e=>{
 
 function die(){
   if(state!=='playing'||inv>0) return;
-  pl.alive=false; lives--;
+  pl.alive=false; if(!testerInfLives) lives--;
   shake(7,16); sfx.hurt();
   if(navigator.vibrate) navigator.vibrate(120);
   state='dead'; deathT=lives<=0?220:140;
@@ -59,7 +67,7 @@ function update(){
   // ── MENÚ: solo animar fuegos artificiales decorativos ──
   if(state==='menu'){
     menuTick++;
-    if(menuTick%55===0) spawnFW(80+Math.random()*520, 30+Math.random()*120);
+    if(menuTick%150===0) spawnFW(80+Math.random()*520, 30+Math.random()*120);
     tickFW();
     return;
   }
@@ -82,7 +90,8 @@ function update(){
         state='gameover';
       }else{
         state='playing';
-        pl=checkpointActive&&checkpointX!==null?mkPl(checkpointX,GY-44):mkPl();
+        pl=respawnPt?mkPl(respawnPt.x,respawnPt.y)
+          :checkpointActive&&checkpointX!==null?mkPl(checkpointX,GY-44):mkPl();
         inv=100; setMsg(''); setHUD();
       }
     }
@@ -97,6 +106,7 @@ function update(){
         worldIdx++;loadWorld(worldIdx);pl=mkPl();inv=90;
         state=W.intro?'worldIntro':'playing';
         setMsg('');setHUD();
+        giveWorldBonus();
       }else state='final';
     }
     return;
@@ -108,10 +118,11 @@ function update(){
   tickDust();
 
   const movPlat=p=>{p.x+=p.spd*p.dir;if(p.x>p.ox+p.range||p.x<p.ox)p.dir*=-1;};
-  movPlat(mp); if(mp2)movPlat(mp2); if(mp3)movPlat(mp3);
+  if(mp)movPlat(mp); if(mp2)movPlat(mp2); if(mp3)movPlat(mp3);
 
   const left=isLeft(),right=isRight(),jump=isJump();
-  const j1=worldIdx>=3?-12.2:-13.2, j2=worldIdx>=3?-9.8:-10.8;
+  const hardJump=planet==='tierra'&&worldIdx>=3;
+  const j1=hardJump?-12.2:-13.2, j2=hardJump?-9.8:-10.8;
   if(left){pl.vx=-SPD;pl.dir=-1;} else if(right){pl.vx=SPD;pl.dir=1;} else pl.vx*=0.72;
 
   if(jump&&!keys['_jh']&&!touch._jh&&pl.jumps<2){
@@ -152,6 +163,8 @@ function update(){
   updateEnemies();
   updateMeteors();
   updateKeys();
+  updateChests();
+  updateGeysers();
   if(pl.y>CH+40) die();
 
   const ns=Math.max(score,Math.floor((pl.x/WW)*100)+(worldIdx*100));
@@ -166,13 +179,14 @@ function update(){
   // La cámara vertical solo entra en acción cuando Clau escala más arriba de
   // lo que cualquier nivel normal necesita (umbral por debajo de todo lo
   // existente), así que niveles sin torres altas se ven exactamente igual.
-  const camYTarget=Math.min(0,pl.y-15);
+  // En el laberinto la cámara centra a Clau para ver los pisos de arriba y abajo.
+  const camYTarget=Math.min(0,W.maze?pl.y-CH*0.5:pl.y-15);
   camY+=(camYTarget-camY)*0.12;
   if(camY>0)camY=0;
 
   const g=W.goal;
   const goalLocked=!!(W.keyGate&&keysCollected<pickupKeys.length);
-  if(rc(pl.x,pl.y,pl.w,pl.h,g.x,g.y,g.w,g.h+12)){
+  if(!goalHidden()&&rc(pl.x,pl.y,pl.w,pl.h,g.x,g.y,g.w,g.h+12)){
     if(goalLocked){
       if(lockMsgCd<=0){
         setMsg('🔒 Necesitas las 4 llaves para pasar');
@@ -181,6 +195,7 @@ function update(){
       }
     }else{
       state='win'; celebT=0; sfx.win();
+      if(W.keyGate) carriedKeys=keysCollected; // las llaves viajan al siguiente mundo
       const tw=worldCount();
       if(worldIdx<tw-1)setMsg(`¡Clau llegó! 🎉 Mundo ${worldIdx+1} superado. ¡Vamos al ${worldIdx+2}!`);
       else setMsg(planet==='marte'?'¡Lo lograste, Clau! 🏆 ¡Marte está a salvo!':'¡Lo lograste, Clau! 🏆 ¡Los 6 mundos conquistados!');
@@ -211,7 +226,9 @@ function draw(){
     ctx.translate((Math.random()-0.5)*shakeMag,(Math.random()-0.5)*shakeMag);
     shakeT--; if(shakeT<=0)shakeMag=0;
   }
-  drawBG();drawPlats();drawSpikes();
+  drawBG();drawMazeBackdrop();drawPlats();drawSpikes();
+  drawGeysers();
+  drawChests();
   drawCheckpoint();
   drawExtraLife();
   drawPickupKeys();
@@ -221,7 +238,8 @@ function draw(){
   drawMeteors();
   drawDust();
   drawClau(pl.x,pl.y,pl.dir,pl.frame,pl.alive);
-  drawProgress();drawFW();
+  drawGoalPointer();
+  drawProgress();drawBanner();drawFW();
   ctx.restore();
 
   function txt(t,x,y,fill,font,shadow='rgba(0,0,0,0.7)',sOff=3){
@@ -240,7 +258,7 @@ function draw(){
       ctx.fillStyle='#FFD700';ctx.beginPath();ctx.roundRect(CW/2-120,CH/2+44,240*bar,12,6);ctx.fill();
     }else{
       txt('¡FELICIDADES CLAU! 🏆',CW/2,CH/2-30,'#FFD700','bold 32px Courier New,monospace');
-      txt(planet==='marte'?'¡Superaste los 3 mundos de Marte!':'¡Superaste los 6 mundos!',CW/2,CH/2+14,'#ffe066','bold 22px Courier New,monospace');
+      txt(planet==='marte'?`¡Superaste los ${worldCount()} mundos de Marte!`:'¡Superaste los 6 mundos!',CW/2,CH/2+14,'#ffe066','bold 22px Courier New,monospace');
       txt('🐣 ¡Clau es la campeona! 🎀',CW/2,CH/2+46,'#fff','bold 16px Courier New,monospace');
     }
     ctx.textAlign='left';drawFW();
@@ -350,7 +368,7 @@ const FRAME_MS=1000/60; let lastT=0;
 function loop(ts){
   requestAnimationFrame(loop);
   if(ts-lastT<FRAME_MS-1)return;
-  lastT=ts; update(); draw();
+  lastT=ts; update(); draw(); updateOpenBtn();
 }
 cv.setAttribute('tabindex','0');cv.focus();
 requestAnimationFrame(loop);

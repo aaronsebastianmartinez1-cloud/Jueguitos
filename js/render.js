@@ -76,7 +76,7 @@ function drawBG(){
 }
 
 function drawPlats(){
-  const movs=[mp,...(mp2?[mp2]:[]),...(mp3?[mp3]:[])];
+  const movs=[...(mp?[mp]:[]),...(mp2?[mp2]:[]),...(mp3?[mp3]:[])];
   [...W.plats.filter(p=>!p.g),...movs].forEach(p=>{
     const sx=wx(p.x);if(sx>CW||sx+p.w<0)return;
     const sy=wy(p.y);if(sy>CH||sy+p.h<0)return;
@@ -152,6 +152,7 @@ function drawExtraLife(){
 }
 
 function drawGoal(){
+  if(goalHidden()) return;
   const g=W.goal,sx=wx(g.x);if(sx>CW||sx+g.w<0)return;
   const y=wy(g.y),{h}=g;
   const locked=!!(W.keyGate&&keysCollected<pickupKeys.length);
@@ -311,7 +312,7 @@ function drawProgress(){
   const n=worldCount();
   const bw=220,bh=9,bx=CW/2-bw/2,by=10;
   ctx.fillStyle='rgba(0,0,0,0.28)';ctx.beginPath();ctx.roundRect(bx-1,by-1,bw+2,bh+2,4);ctx.fill();
-  const bgCols=planet==='marte'?['#5a1c0c','#4a1030','#2a0a30']:['#5a8a3f','#7a3510','#1a3060','#1a4020','#5a1800','#050520'];
+  const bgCols=planet==='marte'?['#5a1c0c','#4a1030','#2a0a30','#3a0c14']:['#5a8a3f','#7a3510','#1a3060','#1a4020','#5a1800','#050520'];
   ctx.fillStyle=bgCols[worldIdx]||'#1a1a2e';ctx.beginPath();ctx.roundRect(bx,by,bw,bh,4);ctx.fill();
   const prog=Math.min(1,pl.x/WW);
   ctx.fillStyle='#FFD700';ctx.beginPath();ctx.roundRect(bx,by,bw*prog,bh,4);ctx.fill();

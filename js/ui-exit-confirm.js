@@ -9,6 +9,7 @@ function wrapText(text,cx,y,maxW,lh){
   }
   lines.push(line);
   lines.forEach((l,i)=>ctx.fillText(l.trim(),cx,y+i*lh));
+  return lines.length;
 }
 
 function drawExitConfirm(){

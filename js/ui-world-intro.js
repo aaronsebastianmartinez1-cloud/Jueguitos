@@ -2,7 +2,15 @@
 function drawWorldIntro(){
   ctx.save();ctx.globalAlpha=0.8;ctx.fillStyle='#000';ctx.fillRect(0,0,CW,CH);ctx.restore();
 
-  const bw=440,bh=240,bx=CW/2-bw/2,by=CH/2-bh/2;
+  const info=W.intro||{title:'',body:''};
+  // El cuadro crece según el largo del texto (mide las líneas sin dibujarlas)
+  ctx.font='13px Courier New,monospace';
+  const bw=440;
+  let nLines=1,cur='';
+  for(const w of info.body.split(' ')){
+    if(ctx.measureText(cur+w+' ').width>bw-56&&cur){nLines++;cur=w+' ';}else cur+=w+' ';
+  }
+  const bh=Math.max(240,160+nLines*19),bx=CW/2-bw/2,by=CH/2-bh/2;
   const grad=ctx.createLinearGradient(bx,by,bx,by+bh);
   if(planet==='marte'){ grad.addColorStop(0,'#3a1006'); grad.addColorStop(1,'#7a2a10'); }
   else { grad.addColorStop(0,'#0d2a10'); grad.addColorStop(1,'#1a4a20'); }
@@ -11,7 +19,6 @@ function drawWorldIntro(){
   ctx.strokeStyle='rgba(255,215,0,0.55)';ctx.lineWidth=2;
   ctx.beginPath();ctx.roundRect(bx,by,bw,bh,18);ctx.stroke();
 
-  const info=W.intro||{title:'',body:''};
   ctx.textAlign='center';
   ctx.fillStyle='rgba(0,0,0,0.6)';ctx.font='bold 21px Courier New,monospace';
   ctx.fillText(info.title,CW/2+2,by+44+2);

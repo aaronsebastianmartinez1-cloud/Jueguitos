@@ -11,6 +11,7 @@ window.addEventListener('keydown',e=>{
     state='playing';
   }
   if((e.code==='KeyP'||e.code==='Escape')&&state==='playing'){ togglePause(); }
+  if(['KeyE','Enter','ArrowDown','KeyS'].includes(e.code)&&state==='playing'&&!paused){ tryOpenChest(); }
   if(e.code==='Escape'&&state==='exitConfirm'){ state='playing'; }
 });
 window.addEventListener('keyup',e=>keys[e.code]=false);

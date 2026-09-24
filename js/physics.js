@@ -5,7 +5,7 @@ function rc(ax,ay,aw,ah,bx,by,bw,bh){
 
 function resolve(){
   pl.onGround=false;
-  const all=[...W.plats,mp,...(mp2?[mp2]:[]),...(mp3?[mp3]:[])];
+  const all=[...W.plats,...(mp?[mp]:[]),...(mp2?[mp2]:[]),...(mp3?[mp3]:[])];
   for(const p of all){
     if(!rc(pl.x,pl.y,pl.w,pl.h,p.x,p.y,p.w,p.h)) continue;
     const ox=Math.min(pl.x+pl.w,p.x+p.w)-Math.max(pl.x,p.x);

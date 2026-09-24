@@ -25,3 +25,9 @@ html,body{width:100%;height:100%;background:#1a1a2e;overflow:hidden;touch-action
 #btn-jump.pressed{background:rgba(255,120,60,0.38);border-color:rgba(255,160,60,0.8);color:#FFD27A;}
 @media(max-width:900px),(hover:none) and (pointer:coarse){#ctrl{display:none;}#touch-controls{display:block;}}
 @media(max-width:600px) and (orientation:portrait){#rotate-msg{display:flex;}}
+/* Botón "Abrir" de los cofres del laberinto: flota sobre el cofre, por encima de los controles táctiles */
+#btn-open{display:none;position:absolute;z-index:30;transform:translate(-50%,-100%);padding:7px 16px;border:2px solid #7a4a00;border-radius:12px;background:linear-gradient(#ffe066,#ffb700);color:#3a2000;font:bold 15px 'Courier New',monospace;box-shadow:0 3px 0 #7a4a00,0 0 14px rgba(255,215,0,0.55);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;animation:openPulse 0.9s ease-in-out infinite alternate;}
+#btn-open.show{display:block;}
+#btn-open:active{transform:translate(-50%,-100%) scale(0.92);}
+@keyframes openPulse{from{box-shadow:0 3px 0 #7a4a00,0 0 6px rgba(255,215,0,0.35);}to{box-shadow:0 3px 0 #7a4a00,0 0 18px rgba(255,215,0,0.85);}}
+#hTester{color:#7dffb0;cursor:pointer;padding:0 6px;border:1px dashed rgba(125,255,176,0.6);border-radius:6px;user-select:none;}

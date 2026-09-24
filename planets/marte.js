@@ -1,9 +1,50 @@
-// ── planets/marte.js — los 3 mundos de Marte ──
+// ── planets/marte.js — los 4 mundos de Marte ──
 // Mundo 1: esquiva meteoritos (protégete bajo plataformas con techo)
 // Mundo 2: parkour + alienígenas saltarinas + espinas + la Tierra a lo lejos
 // Mundo 3: el mismo parkour marciano, pero hay que recuperar 4 llaves para
 //          habilitar la bandera de meta
-const MARTE_WWS=[3100,1800,1800];
+// Mundo 4: laberinto de 4 pisos; las llaves del mundo 3 abren 4 cofres con
+//          fragmentos de casco. La meta solo aparece con los 4 fragmentos.
+const MARTE_WWS=[3100,1800,1800,2400];
+
+// ── Generador del laberinto (Mundo 4) ──
+// Rejilla de 12 columnas (200px cada una) y 4 pasillos apilados
+// (R0 = suelo … R3 = arriba). Cada pasillo mide 94px de alto.
+//  walls[r]: fronteras de columna (1..11) con pared en el pasillo r
+//  gaps[k]:  columnas con hueco en la losa que separa R(k-1) de Rk
+//  pits:     columnas con agujero mortal en el suelo
+const MAZE_CELL=200, MAZE_COLS=12, MAZE_SLAB=16, MAZE_GAP=70;
+const MAZE_FLOOR=[GY,GY-110,GY-220,GY-330]; // parte de arriba del piso de cada pasillo
+const MAZE_ROOF=GY-440;                     // techo macizo sobre R3
+const mazeFloor=r=>MAZE_FLOOR[r];
+function buildMaze(def){
+  const plats=[],C=MAZE_CELL,G=MAZE_GAP,total=C*MAZE_COLS;
+  // suelo con agujeros (segmentos en orden para que drawBG pinte los pozos)
+  let gx=0;
+  def.pits.forEach(c=>{
+    const px=c*C+(C-G)/2;
+    plats.push({x:gx,y:GY,w:px-gx,h:60,g:true});
+    gx=px+G;
+  });
+  plats.push({x:gx,y:GY,w:total-gx,h:60,g:true});
+  // losas entre pasillos, con huecos para subir/bajar
+  for(let k=1;k<=3;k++){
+    let sx=0;
+    def.gaps[k].forEach(c=>{
+      const hx=c*C+(C-G)/2;
+      if(hx>sx) plats.push({x:sx,y:MAZE_FLOOR[k],w:hx-sx,h:MAZE_SLAB});
+      sx=hx+G;
+    });
+    plats.push({x:sx,y:MAZE_FLOOR[k],w:total-sx,h:MAZE_SLAB});
+  }
+  plats.push({x:0,y:MAZE_ROOF,w:total,h:MAZE_SLAB});
+  // paredes: desde la losa de arriba hasta el piso del pasillo
+  for(let r=0;r<4;r++){
+    const top=(r<3?MAZE_FLOOR[r+1]:MAZE_ROOF)+MAZE_SLAB;
+    def.walls[r].forEach(b=>plats.push({x:b*C-8,y:top,w:16,h:MAZE_FLOOR[r]-top}));
+  }
+  return plats;
+}
 
 const MARTE_WORLDS=[
 // ══════════ MUNDO 1 – Lluvia de Meteoritos ══════════
@@ -174,6 +215,61 @@ const MARTE_WORLDS=[
   elDefs:[
     {x:965,y:GY-105-26},
     {x:920,y:GY-375-26}, // MUY arriesgada: en el borde de la torre 2, a un paso del vacío
+  ],
+},
+// ══════════ MUNDO 4 – El Laberinto de los Cofres ══════════
+{
+  sky:['#12040a','#3a0c14'],ground:'#5a1a10',gline:'#240806',
+  platCol:'#4a1812',pitCol:'#050102',lavaGlow:false,bgStars:true,
+  maze:true, fragGate:true, usesKeys:true,
+  bonusLives:2, // regalo al entrar: el laberinto es largo y difícil
+  intro:{
+    title:'🗝️ ¡USA TUS LLAVES!',
+    body:'Las 4 llaves que recuperaste abren los cofres de este laberinto. Dentro están los fragmentos del casco espacial de Clau. Abre cada cofre con una llave y reúne los 4 fragmentos: solo así aparecerá la meta. ¡Cuidado con las espinas, los agujeros y los géiseres de fuego! Para ayudarte, recibes 2 vidas extra 🩷.',
+  },
+  plats:buildMaze({
+    pits:[2,6,10],
+    gaps:{1:[1,3,5,9,11], 2:[0,4,8,10], 3:[2,6,7,11]},
+    walls:[
+      [4,8],        // R0 (suelo)
+      [2,6,10],     // R1
+      [3,7,9],      // R2
+      [5,8],        // R3 (arriba)
+    ],
+  }),
+  mp:null,
+  spikes:[
+    {x:190, y:mazeFloor(0),w:20},{x:590, y:mazeFloor(0),w:20},
+    {x:1180,y:mazeFloor(0),w:20},{x:1720,y:mazeFloor(0),w:20},{x:1990,y:mazeFloor(0),w:20},
+    {x:190, y:mazeFloor(1),w:20},{x:1310,y:mazeFloor(1),w:40},{x:1560,y:mazeFloor(1),w:20},
+    {x:2190,y:mazeFloor(1),w:20},
+    {x:290, y:mazeFloor(2),w:20},{x:1185,y:mazeFloor(2),w:20},{x:2190,y:mazeFloor(2),w:20},
+    {x:630, y:mazeFloor(3),w:20},{x:840, y:mazeFloor(3),w:20},
+    {x:1800,y:mazeFloor(3),w:40},{x:2150,y:mazeFloor(3),w:20},
+  ],
+  // Géiseres de fuego: primero humean (aviso) y luego escupen una columna de fuego
+  geyserDefs:[
+    {x:1000,y:mazeFloor(1),off:0},
+    {x:1090,y:mazeFloor(2),off:60},
+    {x:740, y:mazeFloor(3),off:30},
+    {x:1440,y:mazeFloor(1),off:90},
+    {x:1990,y:mazeFloor(3),off:120},
+    {x:1420,y:mazeFloor(0),off:45},
+    {x:1780,y:mazeFloor(0),off:100},
+  ],
+  // Cofres escondidos en callejones sin salida (cada uno gasta 1 llave)
+  chestDefs:[
+    {x:1530,y:mazeFloor(0)}, // abajo, tras el agujero del pasillo central
+    {x:925, y:mazeFloor(3)}, // arriba a la izquierda: el desvío más largo
+    {x:1225,y:mazeFloor(1)}, // al fondo del pasillo del segundo piso
+    {x:1625,y:mazeFloor(3)}, // arriba a la derecha
+  ],
+  goal:{x:1630,y:GY-80,w:26,h:80}, // oculta hasta tener los 4 fragmentos
+  clouds:[],
+  enemyDefs:[],
+  elDefs:[
+    {x:40,y:mazeFloor(2)-26},
+    {x:2360,y:mazeFloor(3)-26}, // MUY arriesgada: rincón del último piso, junto a espinas y géiser
   ],
 },
 ];

@@ -6,10 +6,12 @@ let winT=0,inv=0,camX=0,camY=0,celebT=0,deathMsg='';
 let checkpointX=null,checkpointActive=false;
 let enemies=[],projectiles=[],extraLives=[];
 let meteors=[],meteorState=[],pickupKeys=[],keysCollected=0,lockMsgCd=0;
+// Mundo del laberinto: las llaves del mundo anterior se guardan en carriedKeys
+let carriedKeys=0,chests=[],geysers=[],fragments=0,respawnPt=null,banner=null;
 let menuTick=0; // animación del menú
 let paused=false;
 
-function worldCount(){return planet==='marte'?3:6;}
+function worldCount(){return planet==='marte'?MARTE_WORLDS.length:6;}
 
 const setMsg=t=>document.getElementById('msg').textContent=t;
 let bestScore=parseInt(localStorage.getItem('polliclau_best')||'0',10);
@@ -19,11 +21,20 @@ const setHUD=()=>{
   document.getElementById('hWorld').textContent=(planet==='marte'?'🔴 Mundo ':'🌍 Mundo ')+(worldIdx+1);
   const keysEl=document.getElementById('hKeys');
   if(keysEl){
-    if(W&&W.keyGate){
+    if(W&&(W.keyGate||W.usesKeys)){
       keysEl.style.display='';
       document.getElementById('hKeysCount').textContent=keysCollected;
+      document.getElementById('hKeysOf').style.display=W.keyGate?'':'none';
       document.getElementById('hKeysTotal').textContent=pickupKeys.length;
     }else keysEl.style.display='none';
+  }
+  const fragEl=document.getElementById('hFrags');
+  if(fragEl){
+    if(W&&W.fragGate){
+      fragEl.style.display='';
+      document.getElementById('hFragsCount').textContent=fragments;
+      document.getElementById('hFragsTotal').textContent=chests.length;
+    }else fragEl.style.display='none';
   }
   if(score>bestScore){bestScore=score;localStorage.setItem('polliclau_best',String(bestScore));}
 };
@@ -35,7 +46,7 @@ function loadWorld(idx){
   const wwsArr=planet==='marte'?MARTE_WWS:TIERRA_WWS;
   W=worldsArr[idx];
   WW=wwsArr[idx];
-  mp=Object.assign({},W.mp);
+  mp=W.mp?Object.assign({},W.mp):null;
   mp2=W.mp2?Object.assign({},W.mp2):null;
   mp3=W.mp3?Object.assign({},W.mp3):null;
   camX=0; camY=0; winT=0; celebT=0; fws=[];
@@ -52,7 +63,10 @@ function loadWorld(idx){
   meteors=[];
   meteorState=W.meteorCols?W.meteorCols.map(c=>({x:c.x,cd:c.cd||100,timer:(c.cd||100)+(Math.random()*40|0)})):[];
   pickupKeys=W.keyDefs?W.keyDefs.map(k=>({...k,collected:false,pulse:Math.random()*10})):[];
-  keysCollected=0; lockMsgCd=0;
+  keysCollected=W.usesKeys?carriedKeys:0; lockMsgCd=0;
+  chests=W.chestDefs?W.chestDefs.map(c=>({...c,opened:false,openT:0})):[];
+  geysers=W.geyserDefs?W.geyserDefs.map(g=>({...g,t:g.off||0})):[];
+  fragments=0; respawnPt=null; banner=null;
   document.getElementById('hWorld').textContent=(planet==='marte'?'🔴 Mundo ':'🌍 Mundo ')+(idx+1);
 }
 loadWorld(0);

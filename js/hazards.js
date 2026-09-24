@@ -14,7 +14,7 @@ function updateMeteors(){
     }
   }
   if(!meteors.length) return;
-  const all=[...W.plats,mp,...(mp2?[mp2]:[]),...(mp3?[mp3]:[])];
+  const all=[...W.plats,...(mp?[mp]:[]),...(mp2?[mp2]:[]),...(mp3?[mp3]:[])];
   for(const m of meteors){
     if(m.dead) continue;
     m.vy+=0.13; if(m.vy>7.5)m.vy=7.5;
